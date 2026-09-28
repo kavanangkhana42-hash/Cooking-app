@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="lo">
+<head>
+    <meta charset="UTF-8">
+    <title>ระบบสูตรทำขนมและการเรียน</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; max-width: 700px; margin: auto; background-color: #f7f9fc; }
+        .card { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input[type="text"], textarea { width: 100%; padding: 8px; margin-top: 5px; margin-bottom: 10px; box-sizing: border-box; border: 1px solid #ccc; border-radius: 4px; }
+        button { background-color: #ff7f50; color: white; border: none; padding: 10px 15px; cursor: pointer; border-radius: 4px; width: 100%; font-size: 16px; }
+        button:hover { background-color: #ff6348; }
+        
+        .recipe-item { background: #fff; padding: 15px; margin-bottom: 10px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: 0.2s; border-left: 5px solid #ff7f50; }
+        .recipe-item:hover { background-color: #fff5f2; }
+        
+        .status-badge { padding: 4px 10px; border-radius: 12px; font-size: 12px; color: white; font-weight: bold; }
+        .bg-learning { background-color: #3498db; }
+        .bg-finished { background-color: #2ecc71; }
+
+        /* หน้าต่างรายละเอียดสูตรขนม (Modal) */
+        #recipeModal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; }
+        .modal-content { background: white; padding: 25px; border-radius: 8px; width: 90%; max-width: 500px; box-shadow: 0 4px 10px rgba(0,0,0,0.2); max-height: 90vh; overflow-y: auto; }
+        .modal-buttons { margin-top: 15px; display: flex; gap: 10px; }
+        .btn-learning { background-color: #3498db; flex: 1; }
+        .btn-finished { background-color: #2ecc71; flex: 1; }
+        .btn-edit { background-color: #f39c12; color: white; border: none; padding: 8px 12px; cursor: pointer; border-radius: 4px; margin-top: 10px; width: 100%; }
+        .btn-edit:hover { background-color: #d68910; }
+        .btn-close { background-color: #95a5a6; margin-top: 10px; width: 100%; }
+        
+        /* สไตล์สำหรับลิ้งในรายละเอียด */
+        #modalDesc a { color: #3498db; text-decoration: underline; }
+        #modalDesc a:hover { color: #1d6fa5; }
+    </style>
+</head>
+<body>
+
+    <h2>🍰 ระบบสูตรทำขนมและการเรียน</h2>
+
+    <!-- ฟอร์มเพิ่มสูตรขนม -->
+    <div class="card">
+        <h3>เพิ่มสูตรขนมใหม่</h3>
+        <label>ชื่อเมนูขนม:</label>
+        <input type="text" id="recipeTitle" placeholder="เช่น บราวนี่, เค้กส้ม...">
+        
+        <label>ส่วนผสมและวิธีทำ:</label>
+        <textarea id="recipeDesc" rows="4" placeholder="ระบุส่วนผสมและขั้นตอนการทำอย่างละเอียด..."></textarea>
+        
+        <button onclick="addRecipe()">บันทึกสูตรขนม</button>
+    </div>
+
+    <!-- รายการสูตรขนมทั้งหมด -->
+    <h3>รายการสูตรขนมของคุณ</h3>
+    <div id="recipeList"></div>
+
+    <!-- หน้าต่างรายละเอียดสูตรขนม (Modal) -->
+    <div id="recipeModal">
+        <div class="modal-content">
+            <!-- ส่วนแสดงผลปกติ -->
+            <div id="viewMode">
+                <h2 id="modalTitle" style="margin-top: 0; color: #ff7f50;"></h2>
+                <p><strong>รายละเอียดสูตร / วิธีทำ:</strong></p>
+                <div id="modalDesc" style="white-space: pre-wrap; background: #f9f9f9; padding: 10px; border-radius: 4px; max-height: 150px; overflow-y: auto; border: 1px solid #eee;"></div>
+                
+                <button class="btn-edit" onclick="enableEditMode()">✏️ แก้ไขสูตรขนมนี้</button>
+
+                <p style="margin-top: 15px;"><strong>สถานะการเรียนรู้ของคุณ:</strong></p>
+                <div class="modal-buttons">
+                    <button class="btn-learning" onclick="updateStatus('learning')">📖 กำลังเรียน</button>
+                    <button class="btn-finished" onclick="updateStatus('finished')">✅ เรียนเสร็จสิ้น</button>
+                </div>
+            </div>
+
+            <!-- ส่วนสำหรับแก้ไข (ซ่อนไว้ก่อน) -->
+            <div id="editMode" style="display: none;">
+                <h3 style="margin-top: 0; color: #f39c12;">แก้ไขสูตรขนม</h3>
+                <label>ชื่อเมนูขนม:</label>
+                <input type="text" id="editTitleInput">
+                
+                <label>รายละเอียดสูตร / วิธีทำ:</label>
+                <textarea id="editDescInput" rows="5"></textarea>
+
+                <button style="background-color: #2ecc71; margin-top: 5px;" onclick="saveEdit()">💾 บันทึกการแก้ไข</button>
+                <button style="background-color: #95a5a6; margin-top: 5px;" onclick="cancelEdit()">ยกเลิก</button>
+            </div>
+
+            <button class="btn-close" onclick="closeModal()">ปิดหน้าต่าง</button>
+        </div>
+    </div>
+
+    <script>
+        let recipes = [];
+        let currentEditingIndex = null;
+
+        document.addEventListener("DOMContentLoaded", loadRecipes);
+
+        function addRecipe() {
+            const title = document.getElementById("recipeTitle").value.trim();
+            const desc = document.getElementById("recipeDesc").value.trim();
+
+            if (title === "") {
+                alert("กรุณากรอกชื่อเมนูขนม");
+                return;
+            }
+
+            const newRecipe = {
+                title: title,
+                desc: desc,
+                status: "learning"
+            };
+
+            recipes.push(newRecipe);
+            saveAndRender();
+
+            document.getElementById("recipeTitle").value = "";
+            document.getElementById("recipeDesc").value = "";
+        }
+
+        function renderRecipes() {
+            const listContainer = document.getElementById("recipeList");
+            listContainer.innerHTML = "";
+
+            if (recipes.length === 0) {
+                listContainer.innerHTML = "<p style='color: #888;'>ยังไม่มีสูตรขนม เพิ่มสูตรแรกของคุณได้เลย!</p>";
+                return;
+            }
+
+            recipes.forEach((recipe, index) => {
+                const itemDiv = document.createElement("div");
+                itemDiv.className = "recipe-item";
+                
+                let statusText = "กำลังเรียน";
+                let statusClass = "bg-learning";
+                if (recipe.status === "finished") {
+                    statusText = "เรียนเสร็จสิ้น";
+                    statusClass = "bg-finished";
+                }
+
+                itemDiv.innerHTML = `
+                    <div>
+                        <strong>${escapeHtml(recipe.title)}</strong>
+                    </div>
+                    <div>
+                        <span class="status-badge ${statusClass}">${statusText}</span>
+                    </div>
+                `;
+
+                itemDiv.onclick = function() {
+                    openModal(index);
+                };
+
+                listContainer.appendChild(itemDiv);
+            });
+        }
+
+        function openModal(index) {
+            currentEditingIndex = index;
+            const recipe = recipes[index];
+
+            document.getElementById("modalTitle").textContent = recipe.title;
+            
+            // ໃຊ້ innerHTML ພ້ອມຜ່ານຟັງຊັນ escapeHtml ແລະ linkify ເພື່ອໃຫ້ລິ້ງສາມາດກົດໄດ້
+            const descText = recipe.desc || "ไม่มีรายละเอียดเพิ่มเติม";
+            document.getElementById("modalDesc").innerHTML = linkify(escapeHtml(descText));
+            
+            // ปิดโหมดแก้ไข เปิดโหมดแสดงผลปกติ
+            document.getElementById("viewMode").style.display = "block";
+            document.getElementById("editMode").style.display = "none";
+
+            document.getElementById("recipeModal").style.display = "flex";
+        }
+
+        function closeModal() {
+            document.getElementById("recipeModal").style.display = "none";
+            currentEditingIndex = null;
+        }
+
+        function enableEditMode() {
+            const recipe = recipes[currentEditingIndex];
+            document.getElementById("editTitleInput").value = recipe.title;
+            document.getElementById("editDescInput").value = recipe.desc;
+
+            document.getElementById("viewMode").style.display = "none";
+            document.getElementById("editMode").style.display = "block";
+        }
+
+        function cancelEdit() {
+            document.getElementById("viewMode").style.display = "block";
+            document.getElementById("editMode").style.display = "none";
+        }
+
+        function saveEdit() {
+            const newTitle = document.getElementById("editTitleInput").value.trim();
+            const newDesc = document.getElementById("editDescInput").value.trim();
+
+            if (newTitle === "") {
+                alert("กรุณากรอกชื่อเมนูขนม");
+                return;
+            }
+
+            recipes[currentEditingIndex].title = newTitle;
+            recipes[currentEditingIndex].desc = newDesc;
+
+            saveAndRender();
+            openModal(currentEditingIndex); // รีเฟรชหน้าต่าง Modal ให้แสดงข้อมูลใหม่
+        }
+
+        function updateStatus(newStatus) {
+            if (currentEditingIndex !== null) {
+                recipes[currentEditingIndex].status = newStatus;
+                saveAndRender();
+                closeModal();
+            }
+        }
+
+        function saveAndRender() {
+            localStorage.setItem("cookingRecipes", JSON.stringify(recipes));
+            renderRecipes();
+        }
+
+        function loadRecipes() {
+            const saved = localStorage.getItem("cookingRecipes");
+            if (saved) {
+                recipes = JSON.parse(saved);
+            }
+            renderRecipes();
+        }
+
+        function escapeHtml(text) {
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+
+        // ຟັງຊັນສຳລັບແປງ URL ໃຫ້ກາຍເປັນ Hyperlink ທີ່ກົດໄດ້
+        function linkify(text) {
+            const urlRegex = /(\b(https?|ftp|file):\/\/[-A-Z0-9+&@#\/%?=~_|!:,.;]*[-A-Z0-9+&@#\/%=~_|])/ig;
+            return text.replace(urlRegex, function(url) {
+                return '<a href="' + url + '" target="_blank" rel="noopener noreferrer">' + url + '</a>';
+            });
+        }
+    </script>
+</body>
+</html>
